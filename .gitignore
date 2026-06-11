@@ -1,0 +1,24 @@
+# Dataset
+datasets/
+
+# YOLO outputs
+runs/
+
+# Model weights
+*.pt
+*.pth
+*.ckpt
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# Environment
+.env
+.tmp.driveupload/
