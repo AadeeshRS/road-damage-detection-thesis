@@ -94,34 +94,14 @@ road-damage-thesis/
 │
 ├── notebooks/
 │   ├── 01_dataset_exploration.ipynb
-│   ├── 02_yolov8_baseline.ipynb
-│   └── 03_yolov8s_baseline.ipynb
-│
-├── detection/
-│   ├── checkpoints/
-│   ├── configs/
-│   ├── training/
-│   ├── inference/
-│   └── yolov8/
-│
-├── sahi/
-│   ├── sliced_inference/
-│   ├── experiments/
-│   └── comparison_results/
-│
-├── segmentation/
-│   ├── unet/
-│   ├── datasets/
-│   ├── training/
-│   ├── masks/
-│   └── checkpoints/
-│
-├── experiments/
-│   └── baseline_vs_sahi/
+│   ├── 02_yolov8n_training.ipynb
+│   ├── 03_yolov8s_training.ipynb
+│   ├── 04_sahi_yolov8n.ipynb
+│   └── 05_sahi_yolov8s.ipynb
 │
 ├── visualizations/
-│   ├── predictions/
 │   ├── comparison_figures/
+│   ├── predictions/
 │   ├── segmentation_masks/
 │   └── thesis_images/
 │
@@ -129,10 +109,12 @@ road-damage-thesis/
 │   ├── literature_review/
 │   ├── methodology/
 │   ├── results/
-│   ├── comparison/
+│   │   ├── yolov8n/
+│   │   ├── yolov8s/
+│   │   └── sahi/
+│   │       ├── yolov8n/
+│   │       └── yolov8s/
 │   └── final_report/
-│
-├── presentations/
 │
 ├── requirements.txt
 ├── README.md
@@ -154,7 +136,7 @@ Completed analyses include:
 * Sample Annotation Visualization
 * Damage Category Exploration
 
-Key observations:
+### Key Observations
 
 * Longitudinal cracks are the most frequent damage category.
 * Potholes are the least represented class.
@@ -165,9 +147,11 @@ Key observations:
 
 ## Baseline Detection Experiments
 
-Two baseline object detection models were trained using identical hyperparameters:
+Two baseline object detection models were trained using identical hyperparameters.
 
 ### YOLOv8n Baseline
+
+Training Configuration:
 
 * Epochs: 20
 * Image Size: 640 × 640
@@ -185,6 +169,8 @@ Results:
 ---
 
 ### YOLOv8s Baseline
+
+Training Configuration:
 
 * Epochs: 20
 * Image Size: 640 × 640
@@ -211,11 +197,76 @@ Results:
 ### Key Findings
 
 * YOLOv8s outperformed YOLOv8n across all evaluation metrics.
-* The most significant improvement was observed in mAP metrics.
+* The largest improvements were observed in precision and mAP scores.
 * Pothole detection remained the most challenging category.
-* Other Corruption achieved the highest detection accuracy.
-* Most errors resulted from missed detections rather than incorrect classifications.
-* Small object detection remains a key challenge, motivating the integration of SAHI.
+* Other Corruption achieved the highest overall detection accuracy.
+* Small object detection remained a significant challenge.
+
+---
+
+## SAHI + YOLOv8n Experiment
+
+To improve small-object detection performance, SAHI (Slicing Aided Hyper Inference) was integrated with the trained YOLOv8n detector.
+
+### SAHI Configuration
+
+| Parameter            | Value |
+| -------------------- | ----- |
+| Slice Height         | 640   |
+| Slice Width          | 640   |
+| Overlap Height Ratio | 0.20  |
+| Overlap Width Ratio  | 0.20  |
+| Confidence Threshold | 0.25  |
+
+### Quantitative Evaluation
+
+A subset of 2000 validation images was evaluated using both standard YOLOv8n inference and SAHI-assisted inference.
+
+| Method         | Total Detections |
+| -------------- | ---------------: |
+| YOLOv8n        |             3773 |
+| YOLOv8n + SAHI |             4564 |
+
+### Detection Improvement
+
+```text
+YOLOv8n detections: 3773
+SAHI detections: 4564
+Improvement: 20.96%
+```
+
+### Observations
+
+* SAHI detected substantially more road damage instances than standard inference.
+* Improvements were most noticeable for small and distant defects.
+* SAHI reduced missed detections in cluttered road scenes.
+* Qualitative comparison figures demonstrated improved sensitivity toward small cracks and potholes.
+* Increased detections came at the cost of higher inference time.
+
+---
+
+## Visualizations Generated
+
+The project includes:
+
+### Prediction Visualizations
+
+* YOLOv8n predictions
+* YOLOv8s predictions
+* SAHI-enhanced predictions
+
+### Comparative Figures
+
+* YOLOv8n vs YOLOv8n + SAHI
+* Top-gain comparison examples
+* Qualitative detection analysis
+
+### Thesis Figures
+
+* Sample detections
+* Class distribution plots
+* Bounding box statistics
+* Detection comparison figures
 
 ---
 
@@ -231,12 +282,14 @@ Results:
 * YOLOv8n Baseline Training and Evaluation
 * YOLOv8s Baseline Training and Evaluation
 * Baseline Model Comparison
-* Repository Organization and Experiment Tracking
+* SAHI + YOLOv8n Evaluation
+* Quantitative Detection Comparison
+* Repository Organization
+* Experimental Result Documentation
 
 ### In Progress
 
-* SAHI Integration for Small Object Detection
-* Baseline vs SAHI Comparative Evaluation
+* SAHI + YOLOv8s Evaluation
 
 ### Upcoming
 
@@ -273,12 +326,14 @@ Results:
 
 Planned experiments include:
 
-1. SAHI + YOLOv8n
-2. SAHI + YOLOv8s
-3. Baseline vs SAHI Performance Comparison
-4. Crack Segmentation using U-Net
-5. Combined Detection and Segmentation Pipeline
-6. Real-world Deployment Considerations
+1. SAHI + YOLOv8s Evaluation
+2. YOLOv8n vs YOLOv8s SAHI Comparison
+3. Crack Segmentation using U-Net
+4. Crack500 Dataset Integration
+5. DeepCrack Dataset Evaluation
+6. Detection–Segmentation Pipeline Integration
+7. Final Thesis Documentation
+8. Research Paper Preparation
 
 ---
 
@@ -287,3 +342,13 @@ Planned experiments include:
 To develop an efficient deep learning framework capable of accurately detecting and segmenting road damage, with a particular focus on improving the detection of small cracks and potholes through SAHI-based sliced inference and pixel-level segmentation using U-Net.
 
 The final system aims to support automated road condition monitoring and intelligent infrastructure maintenance.
+
+---
+
+## Author
+
+**Aadeesh Ranjan**
+
+B.Tech Computer Science and Engineering
+
+Road Damage Detection and Segmentation Thesis Project
