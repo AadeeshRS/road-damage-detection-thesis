@@ -1,6 +1,6 @@
 # Dataset
 datasets/
-
+detection/checkpoints/
 # YOLO outputs
 runs/
 
