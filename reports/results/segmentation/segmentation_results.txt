@@ -1,0 +1,13 @@
+Model: U-Net (ResNet34)
+
+Dataset:
+Crack500
+
+Train Images: 1300
+Validation Images: 162
+Test Images: 163
+
+Best Validation Loss: 0.3181
+
+Dice Score: 0.7533
+IoU Score: 0.6118
