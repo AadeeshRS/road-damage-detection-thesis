@@ -1,0 +1,3 @@
+Model,Encoder,Epochs,Batch_Size,Dice_Score,IoU_Score
+U-Net,ResNet34,30,8,0.7533,0.6118
+DeepLabV3+,ResNet34,30,8,0.7389,0.5931

@@ -1,0 +1,29 @@
+Model: U-Net
+
+Encoder: ResNet34
+Dataset: Crack500
+Image Size: 640x640
+
+Train Images: 1300
+Validation Images: 162
+Test Images: 163
+
+Loss Function:
+- Binary Cross Entropy (BCE)
+- Dice Loss
+- Combined BCE + Dice Loss
+
+Optimizer: Adam
+Learning Rate: 0.0001
+
+Epochs: 30
+Batch Size: 8
+
+Best Validation Loss: 0.3181
+
+Test Metrics:
+Dice Score: 0.7533
+IoU Score: 0.6118
+
+Conclusion:
+U-Net achieved the best segmentation performance on the Crack500 dataset, demonstrating strong preservation of thin crack structures and fine crack boundaries.

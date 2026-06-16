@@ -1,7 +1,0 @@
-Model: YOLOv8s + SAHI
-
-Images Evaluated: 2000
-
-YOLOv8s Detections: 4237
-SAHI Detections: 5475
-Improvement (%): 29.22

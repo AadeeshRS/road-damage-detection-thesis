@@ -1,347 +1,266 @@
-# Road Damage Detection and Segmentation using YOLOv8, SAHI, and U-Net
+# Road Damage Detection and Crack Segmentation using YOLOv8, SAHI, U-Net, and DeepLabV3+
 
 ## Overview
 
-This B.Tech thesis project focuses on the automated detection and segmentation of road damage using state-of-the-art deep learning techniques. The proposed framework combines YOLOv8 for object detection, SAHI (Slicing Aided Hyper Inference) for improved small-object detection, and U-Net for pixel-level segmentation of road defects.
+This repository contains the implementation and experimental results for a B.Tech thesis focused on automated road damage detection and crack segmentation using deep learning.
 
-The objective is to develop an efficient and scalable system capable of detecting and segmenting road damage such as cracks and potholes from road-view images captured using vehicle-mounted cameras.
+The project investigates the effectiveness of YOLOv8 object detectors for road damage detection, SAHI (Slicing Aided Hyper Inference) for improving small-object detection, and semantic segmentation models including U-Net and DeepLabV3+ for pixel-level crack extraction.
 
----
-
-## Problem Statement
-
-Road damage such as cracks and potholes negatively impacts transportation safety, vehicle performance, and infrastructure maintenance costs. Traditional manual inspection methods are labor-intensive, time-consuming, subjective, and difficult to scale across large road networks.
-
-Deep learning-based computer vision approaches offer an opportunity to automate road condition monitoring. However, detecting small and irregular road defects remains challenging due to:
-
-* Small object sizes relative to image dimensions
-* Variations in lighting and weather conditions
-* Road texture diversity
-* Shadows and occlusions
-* Large intra-class variation of damage types
-
-This project aims to address these challenges by combining YOLOv8, SAHI, and U-Net into a unified road damage analysis pipeline.
+The primary objective is to develop an efficient framework capable of identifying and localizing road defects such as longitudinal cracks, transverse cracks, alligator cracks, potholes, and other surface deteriorations from road-view imagery.
 
 ---
 
-## Proposed Pipeline
+## Project Highlights
+
+### Detection Models
+
+* YOLOv8n
+* YOLOv8s
+* YOLOv8m
+
+### SAHI Enhanced Inference
+
+* SAHI + YOLOv8n
+* SAHI + YOLOv8s
+* SAHI + YOLOv8m
+
+### Segmentation Models
+
+* U-Net
+* DeepLabV3+
+
+### Datasets
+
+* RDD2022 (Detection)
+* Crack500 (Segmentation)
+
+---
+
+## Detection Results
+
+### Baseline Model Comparison
+
+| Model   | Precision |    Recall |    mAP@50 | mAP@50-95 |
+| ------- | --------: | --------: | --------: | --------: |
+| YOLOv8n |     0.579 |     0.516 |     0.539 |     0.285 |
+| YOLOv8s |     0.626 |     0.553 |     0.592 |     0.317 |
+| YOLOv8m | **0.677** | **0.590** | **0.633** | **0.344** |
+
+### Key Observation
+
+Increasing model capacity consistently improved road damage detection performance. YOLOv8m achieved the best overall detection performance across all evaluation metrics.
+
+---
+
+## SAHI Evaluation
+
+To improve detection of small and distant road defects, SAHI was applied to all trained YOLOv8 models.
+
+### Detection Count Comparison
+
+| Model   | Baseline Detections | SAHI Detections | Improvement |
+| ------- | ------------------: | --------------: | ----------: |
+| YOLOv8n |                3773 |            4564 |      20.96% |
+| YOLOv8s |                4237 |            5475 |  **29.22%** |
+| YOLOv8m |                4551 |            5321 |      16.92% |
+
+### Key Observation
+
+SAHI consistently improved the number of detected road damage instances by slicing large images into smaller overlapping patches before inference.
+
+The highest gain was observed with YOLOv8s, which achieved a 29.22% increase in detected road defects.
+
+---
+
+## Segmentation Results
+
+Crack segmentation experiments were conducted on the Crack500 dataset using U-Net and DeepLabV3+.
+
+### Model Comparison
+
+| Model      | Dice Score |  IoU Score |
+| ---------- | ---------: | ---------: |
+| U-Net      | **0.7533** | **0.6118** |
+| DeepLabV3+ |     0.7389 |     0.5931 |
+
+### Key Observation
+
+U-Net achieved the highest segmentation performance and was selected as the best-performing segmentation model for this project.
+
+---
+
+## Dataset Information
+
+### RDD2022
+
+Road Damage Detection 2022 dataset containing road images collected from multiple countries.
+
+### Classes
+
+| ID | Class              |
+| -- | ------------------ |
+| 0  | Longitudinal Crack |
+| 1  | Transverse Crack   |
+| 2  | Alligator Crack    |
+| 3  | Other Corruption   |
+| 4  | Pothole            |
+
+### Crack500
+
+Road crack segmentation dataset used for pixel-level damage extraction experiments.
+
+---
+
+## Methodology
+
+### Detection Pipeline
 
 ```text
 Road Image
-    ↓
-SAHI Slicing
-    ↓
+      │
+      ▼
 YOLOv8 Detection
-    ↓
+      │
+      ▼
 Bounding Boxes
-    ↓
-U-Net Segmentation
-    ↓
-Pixel-Level Damage Mask
+      │
+      ▼
+Road Damage Classification
 ```
 
----
+### SAHI Detection Pipeline
 
-## Dataset
+```text
+Road Image
+      │
+      ▼
+Image Slicing
+      │
+      ▼
+YOLOv8 Inference
+      │
+      ▼
+Prediction Merging
+      │
+      ▼
+Enhanced Detection Results
+```
 
-### Detection Dataset
+### Segmentation Pipeline
 
-**RDD2022 (Road Damage Detection 2022)**
-
-The RDD2022 dataset contains road damage images collected from multiple countries and annotated with bounding boxes for various damage categories.
-
-Classes:
-
-| Class ID | Damage Type        |
-| -------- | ------------------ |
-| 0        | Longitudinal Crack |
-| 1        | Transverse Crack   |
-| 2        | Alligator Crack    |
-| 3        | Other Corruption   |
-| 4        | Pothole            |
-
-### Segmentation Dataset (Planned)
-
-* Crack500
-* DeepCrack
-
----
-
-## Technologies Used
-
-* Python
-* PyTorch
-* Ultralytics YOLOv8
-* SAHI
-* OpenCV
-* NumPy
-* Pandas
-* Matplotlib
-* Segmentation Models PyTorch
-* Google Colab
-* Kaggle Notebooks
-* VS Code
-* GitHub
+```text
+Road Image
+      │
+      ▼
+U-Net / DeepLabV3+
+      │
+      ▼
+Pixel-Level Crack Mask
+```
 
 ---
 
 ## Repository Structure
 
 ```text
-road-damage-thesis/
-│
+.
 ├── datasets/
+├── detection/
+│   └── checkpoints/
 │
 ├── notebooks/
 │   ├── 01_dataset_exploration.ipynb
-│   ├── 02_yolov8n_training.ipynb
-│   ├── 03_yolov8s_training.ipynb
+│   ├── 02_yolov8n_baseline.ipynb
+│   ├── 03_yolov8s_baseline.ipynb
 │   ├── 04_sahi_yolov8n.ipynb
-│   └── 05_sahi_yolov8s.ipynb
-│
-├── visualizations/
-│   ├── comparison_figures/
-│   ├── predictions/
-│   ├── segmentation_masks/
-│   └── thesis_images/
+│   ├── 05_sahi_yolov8s.ipynb
+│   ├── 06_yolov8m_baseline.ipynb
+│   ├── 07_sahi_yolov8m.ipynb
+│   ├── 08_unet_crack500.ipynb
+│   ├── 09_deeplabv3plus_crack500.ipynb
+│   └── 10_segmentation_comparison.ipynb
 │
 ├── reports/
-│   ├── literature_review/
-│   ├── methodology/
-│   ├── results/
-│   │   ├── yolov8n/
-│   │   ├── yolov8s/
-│   │   └── sahi/
-│   │       ├── yolov8n/
-│   │       └── yolov8s/
-│   └── final_report/
+│   └── results/
+│       ├── detection/
+│       ├── segmentation/
+│       ├── eda/
+│       └── final_figures/
 │
-├── requirements.txt
-├── README.md
-└── thesis_roadmap.md
+└── README.md
 ```
 
 ---
 
-## Exploratory Data Analysis (Completed)
+## Key Findings
 
-The RDD2022 dataset was analyzed to better understand the distribution and characteristics of road damage instances.
+### Detection
 
-Completed analyses include:
+* YOLOv8m achieved the best baseline detection performance.
+* SAHI significantly improved small-object detection across all YOLO models.
+* YOLOv8s + SAHI achieved the largest improvement (+29.22%).
 
-* Class Distribution Analysis
-* Bounding Box Distribution Analysis
-* Object Size Distribution Analysis
-* Country-wise Dataset Exploration
-* Sample Annotation Visualization
-* Damage Category Exploration
+### Segmentation
 
-### Key Observations
+* U-Net outperformed DeepLabV3+ on Crack500.
+* Crack segmentation performance exceeded 0.75 Dice Score.
 
-* Longitudinal cracks are the most frequent damage category.
-* Potholes are the least represented class.
-* A significant proportion of damage instances occupy a very small fraction of the image area.
-* Small object prevalence motivates the use of SAHI-based sliced inference.
+### Failure Cases
 
----
+Common sources of false positives include:
 
-## Baseline Detection Experiments
+* Vegetation and roadside plants
+* Shadows
+* Snow-covered regions
+* High-contrast road textures
 
-Two baseline object detection models were trained using identical hyperparameters.
-
-### YOLOv8n Baseline
-
-Training Configuration:
-
-* Epochs: 20
-* Image Size: 640 × 640
-* Batch Size: 16
-
-Results:
-
-| Metric       | Value |
-| ------------ | ----: |
-| Precision    | 0.579 |
-| Recall       | 0.516 |
-| mAP@0.5      | 0.539 |
-| mAP@0.5:0.95 | 0.285 |
+These cases highlight the challenges of road damage detection under varying environmental conditions.
 
 ---
 
-### YOLOv8s Baseline
+## Experimental Artifacts
 
-Training Configuration:
+The repository includes:
 
-* Epochs: 20
-* Image Size: 640 × 640
-* Batch Size: 16
+* Training curves
+* Confusion matrices
+* Precision-Recall curves
+* SAHI comparison figures
+* Segmentation predictions
+* Failure case analysis
+* Final thesis-ready figures
 
-Results:
-
-| Metric       | Value |
-| ------------ | ----: |
-| Precision    | 0.626 |
-| Recall       | 0.553 |
-| mAP@0.5      | 0.592 |
-| mAP@0.5:0.95 | 0.317 |
-
----
-
-## Baseline Model Comparison
-
-| Model   | Precision | Recall | mAP@0.5 | mAP@0.5:0.95 |
-| ------- | --------: | -----: | ------: | -----------: |
-| YOLOv8n |     0.579 |  0.516 |   0.539 |        0.285 |
-| YOLOv8s |     0.626 |  0.553 |   0.592 |        0.317 |
-
-### Key Findings
-
-* YOLOv8s outperformed YOLOv8n across all evaluation metrics.
-* The largest improvements were observed in precision and mAP scores.
-* Pothole detection remained the most challenging category.
-* Other Corruption achieved the highest overall detection accuracy.
-* Small object detection remained a significant challenge.
-
----
-
-## SAHI + YOLOv8n Experiment
-
-To improve small-object detection performance, SAHI (Slicing Aided Hyper Inference) was integrated with the trained YOLOv8n detector.
-
-### SAHI Configuration
-
-| Parameter            | Value |
-| -------------------- | ----- |
-| Slice Height         | 640   |
-| Slice Width          | 640   |
-| Overlap Height Ratio | 0.20  |
-| Overlap Width Ratio  | 0.20  |
-| Confidence Threshold | 0.25  |
-
-### Quantitative Evaluation
-
-A subset of 2000 validation images was evaluated using both standard YOLOv8n inference and SAHI-assisted inference.
-
-| Method         | Total Detections |
-| -------------- | ---------------: |
-| YOLOv8n        |             3773 |
-| YOLOv8n + SAHI |             4564 |
-
-### Detection Improvement
+All visual results are stored under:
 
 ```text
-YOLOv8n detections: 3773
-SAHI detections: 4564
-Improvement: 20.96%
+reports/results/final_figures/
 ```
 
-### Observations
-
-* SAHI detected substantially more road damage instances than standard inference.
-* Improvements were most noticeable for small and distant defects.
-* SAHI reduced missed detections in cluttered road scenes.
-* Qualitative comparison figures demonstrated improved sensitivity toward small cracks and potholes.
-* Increased detections came at the cost of higher inference time.
-
 ---
 
-## Visualizations Generated
+## Project Status
 
-The project includes:
-
-### Prediction Visualizations
-
-* YOLOv8n predictions
-* YOLOv8s predictions
-* SAHI-enhanced predictions
-
-### Comparative Figures
-
-* YOLOv8n vs YOLOv8n + SAHI
-* Top-gain comparison examples
-* Qualitative detection analysis
-
-### Thesis Figures
-
-* Sample detections
-* Class distribution plots
-* Bounding box statistics
-* Detection comparison figures
-
----
-
-## Current Progress
-
-### Completed
-
-* Literature Review
-* Research Paper Analysis
-* Project Structure Setup
-* Dataset Acquisition (RDD2022)
-* Exploratory Data Analysis
-* YOLOv8n Baseline Training and Evaluation
-* YOLOv8s Baseline Training and Evaluation
-* Baseline Model Comparison
-* SAHI + YOLOv8n Evaluation
-* Quantitative Detection Comparison
-* Repository Organization
-* Experimental Result Documentation
-
-### In Progress
-
-* SAHI + YOLOv8s Evaluation
-
-### Upcoming
-
-* U-Net Segmentation Pipeline
-* Crack500 Dataset Integration
-* DeepCrack Dataset Evaluation
-* Detection and Segmentation Pipeline Integration
-* Experimental Analysis
-* Thesis Documentation
-* Final Presentation Preparation
-
----
-
-## Evaluation Metrics
-
-### Detection Metrics
-
-* Precision
-* Recall
-* mAP@0.5
-* mAP@0.5:0.95
-* Confusion Matrix Analysis
-* Precision-Recall Curves
-
-### Segmentation Metrics
-
-* Dice Score
-* Intersection over Union (IoU)
-* Pixel Accuracy
+* ✅ Exploratory Data Analysis
+* ✅ YOLOv8n Training and Evaluation
+* ✅ YOLOv8s Training and Evaluation
+* ✅ YOLOv8m Training and Evaluation
+* ✅ SAHI Evaluation
+* ✅ U-Net Segmentation
+* ✅ DeepLabV3+ Segmentation
+* ✅ Experimental Comparison
+* 🚧 Thesis Writing and Documentation
 
 ---
 
 ## Future Work
 
-Planned experiments include:
+Potential extensions include:
 
-1. SAHI + YOLOv8s Evaluation
-2. YOLOv8n vs YOLOv8s SAHI Comparison
-3. Crack Segmentation using U-Net
-4. Crack500 Dataset Integration
-5. DeepCrack Dataset Evaluation
-6. Detection–Segmentation Pipeline Integration
-7. Final Thesis Documentation
-8. Research Paper Preparation
-
----
-
-## Thesis Goal
-
-To develop an efficient deep learning framework capable of accurately detecting and segmenting road damage, with a particular focus on improving the detection of small cracks and potholes through SAHI-based sliced inference and pixel-level segmentation using U-Net.
-
-The final system aims to support automated road condition monitoring and intelligent infrastructure maintenance.
+* Transformer-based object detectors
+* Real-time deployment on edge devices
+* Additional crack segmentation datasets
+* Domain adaptation across countries
+* Integration with intelligent road maintenance systems
 
 ---
 
