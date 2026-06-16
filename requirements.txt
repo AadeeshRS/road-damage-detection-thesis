@@ -1,7 +1,15 @@
 ultralytics
+torch
+torchvision
 opencv-python
 matplotlib
 numpy
 pandas
+scikit-learn
 PyYAML
 jupyter
+sahi
+segmentation-models-pytorch
+tqdm
+Pillow
+seaborn
