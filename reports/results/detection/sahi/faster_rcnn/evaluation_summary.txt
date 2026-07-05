@@ -1,0 +1,8 @@
+Model: Faster R-CNN + SAHI
+
+Images Evaluated: 2000
+
+Faster R-CNN Detections: 6899
+Faster R-CNN + SAHI Detections: 11256
+Absolute Gain: 4357
+Improvement (%): 63.15

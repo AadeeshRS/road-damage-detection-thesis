@@ -1,0 +1,7 @@
+Model: YOLOv11n + SAHI
+
+Images Evaluated: 2000
+
+YOLO11n Detections: 3612
+SAHI Detections: 4496
+Improvement (%): 24.47

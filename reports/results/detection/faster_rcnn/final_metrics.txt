@@ -1,0 +1,21 @@
+
+Faster R-CNN Final Results
+==========================
+
+Best Epoch: 7
+
+mAP50: 0.5359
+mAP50-95: 0.2528
+mAP75: 0.2112
+
+mAP Small: 0.1090
+mAP Medium: 0.2110
+mAP Large: 0.2986
+
+Recall@1: 0.2516
+Recall@10: 0.4203
+Recall@100: 0.4270
+
+Recall Small: 0.2150
+Recall Medium: 0.3793
+Recall Large: 0.4729
