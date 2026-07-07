@@ -1,65 +1,95 @@
-# Road Damage Detection and Crack Segmentation using YOLOv8, YOLO11, Faster R-CNN, SAHI, U-Net, and DeepLabV3+
+# Road Damage Detection and Crack Segmentation Using YOLOv8, YOLO11, Faster R-CNN, SAHI, U-Net, and DeepLabV3+
 
-## Overview
-
-This repository contains the implementation, experiments, and results for a B.Tech thesis focused on automated road damage detection and crack segmentation using deep learning.
-
-The project investigates the effectiveness of one-stage and two-stage object detection models, including YOLOv8, YOLO11, and Faster R-CNN, along with SAHI (Slicing Aided Hyper Inference) for improving small-object detection performance. For pixel-level crack extraction, semantic segmentation models including U-Net and DeepLabV3+ were evaluated.
-
-The primary objective is to develop an efficient framework capable of identifying and localizing road defects such as longitudinal cracks, transverse cracks, alligator cracks, potholes, and other surface deteriorations from road-view imagery.
+This repository contains the experiments, trained models, and results for a Bachelor's thesis on automated road damage detection and crack segmentation using deep learning. The work spans approximately two months of systematic experimentation across seven object detection architectures, two semantic segmentation models, and slicing-aided inference (SAHI) evaluation on public benchmark datasets.
 
 ---
-## Sample Road Damage Detection
+
+## Project Overview
+
+Road surface deterioration poses risks to vehicle safety and increases maintenance costs. Manual inspection is slow and inconsistent. This project investigates deep learning approaches for two complementary tasks:
+
+1. **Object Detection** -- localizing and classifying road damage types (longitudinal cracks, transverse cracks, alligator cracks, potholes, and other surface corruption) using bounding box predictions on the RDD2022 dataset.
+2. **Semantic Segmentation** -- producing pixel-level crack masks on the Crack500 dataset to enable fine-grained damage assessment.
+
+Additionally, SAHI (Slicing Aided Hyper Inference) was evaluated across all detection models to assess its effectiveness on small and distant road defects. An ablation study on SAHI hyperparameters and an exploratory two-stage detector experiment round out the investigation.
 
 <p align="center">
-  <img src="reports/results/detection/sahi/yolov11n/thesis_examples/China_MotorBike_000526.png" width="500">
+  <img src="reports/results/detection/sahi/yolov11n/thesis_examples/China_MotorBike_000526.png" width="520">
 </p>
 
 <p align="center">
-  <em>Example road damage detections produced by YOLO11n on the RDD2022 dataset.</em>
+  <em>Figure 1. Road damage detections produced by YOLO11n on the RDD2022 dataset.</em>
 </p>
 
 ---
+
 ## Project Highlights
 
-### Detection Models
-
-- YOLOv8n
-- YOLOv8s
-- YOLOv8m
-- YOLO11n
-- YOLO11s
-- YOLO11m
-- Faster R-CNN (ResNet50-FPN)
-
-### SAHI Enhanced Inference
-
-- SAHI + YOLOv8n
-- SAHI + YOLOv8s
-- SAHI + YOLOv8m
-- SAHI + YOLO11n
-- SAHI + YOLO11s
-- SAHI + YOLO11m
-- Exploratory: Faster R-CNN + SAHI
-
-### Segmentation Models
-
-- U-Net (ResNet34 Encoder)
-- DeepLabV3+ (ResNet34 Encoder)
-
-### Datasets
-
-- RDD2022 (Road Damage Detection)
-- Crack500 (Road Crack Segmentation)
+- Seven detection models compared under identical training conditions on the full RDD2022 dataset
+- SAHI evaluation on every YOLO variant with quantitative detection count analysis
+- YOLO11m SAHI ablation study covering confidence threshold and slice size
+- Exploratory Faster R-CNN + SAHI experiment with discussion of failure modes
+- U-Net and DeepLabV3+ segmentation on Crack500 with qualitative comparison
+- Literature comparison against recent RDD2022 and Crack500 methods (2020--2025)
+- Full experimental artifacts: training curves, confusion matrices, PR/F1 curves, and thesis-ready figures
 
 ---
 
-## Detection Results
+## Repository Structure
 
-### Baseline Model Comparison
+```text
+Thesis/
+├── datasets/
+│   └── RDD_SPLIT/              # RDD2022 train/val/test splits (YOLO format)
+├── detection/
+│   └── checkpoints/            # Trained model weights (.pt, .pth)
+├── notebooks/                  # 19 Jupyter notebooks (training, evaluation, SAHI, segmentation)
+├── reports/
+│   ├── literature_review/      # Reference papers and summary findings
+│   ├── results/
+│   │   ├── detection/          # Per-model metrics, curves, and examples
+│   │   ├── segmentation/       # U-Net and DeepLabV3+ results
+│   │   ├── eda/                # Dataset exploration figures
+│   │   └── final_figures/      # Thesis-ready visualizations
+│   ├── final_report/
+│   └── methodology/
+├── presentations/
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Datasets
+
+### RDD2022 (Detection)
+
+The Road Damage Detection 2022 dataset contains road-view images from India, Japan, Norway, the United States, and the Czech Republic. Images are annotated with bounding boxes across five damage classes:
+
+| Class ID | Label |
+|----------|-------|
+| 0 | Longitudinal Crack |
+| 1 | Transverse Crack |
+| 2 | Alligator Crack |
+| 3 | Other Corruption |
+| 4 | Pothole |
+
+The dataset was split into train (26,870 images), validation (5,759 images), and test (5,759 images) sets in YOLO format.
+
+### Crack500 (Segmentation)
+
+Crack500 is a binary segmentation dataset for pixel-level road crack extraction. Both segmentation models were trained for 30 epochs with a batch size of 8 using a ResNet34 encoder.
+
+---
+
+## Detection Experiments
+
+Seven models were trained and evaluated on the RDD2022 dataset: YOLOv8 (n, s, m), YOLO11 (n, s, m), and Faster R-CNN (ResNet50-FPN).
+
+### Baseline Comparison
 
 | Model | Precision | Recall | mAP@50 | mAP@50-95 |
-|--------|-----------|--------|---------|------------|
+|-------|-----------|--------|--------|-----------|
 | YOLOv8n | 0.579 | 0.516 | 0.539 | 0.285 |
 | YOLOv8s | 0.626 | 0.553 | 0.592 | 0.317 |
 | **YOLOv8m** | **0.677** | **0.590** | **0.633** | **0.344** |
@@ -68,227 +98,147 @@ The primary objective is to develop an efficient framework capable of identifyin
 | YOLO11m | 0.631 | 0.546 | 0.587 | 0.314 |
 | Faster R-CNN | N/A | 0.427 | 0.536 | 0.253 |
 
-### Key Observations
+### Observations
 
-- YOLOv8m achieved the highest overall detection performance.
-- YOLO11 models provided competitive results but did not outperform YOLOv8m on the RDD2022 dataset.
-- Faster R-CNN served as a strong two-stage baseline but underperformed compared to larger YOLO variants.
+- **YOLOv8m** achieved the highest scores across all four metrics and was selected as the final detection model.
+- Within both the YOLOv8 and YOLO11 families, larger variants consistently outperformed smaller ones.
+- YOLO11 models produced competitive results close to their YOLOv8 counterparts. During qualitative inspection, YOLO11 variants appeared to generate fewer false positives on challenging images (snow, vegetation, varied road textures), though this advantage was less clear in the SAHI evaluation metrics.
+- Faster R-CNN served as a reasonable two-stage baseline but underperformed the larger YOLO variants.
 
 ---
 
 ## SAHI Evaluation
 
-To improve small-object detection, SAHI (Slicing Aided Hyper Inference) was applied to all detection models.
+SAHI divides input images into smaller overlapping slices, runs detection on each slice independently, and merges the predictions. This improves sensitivity to small and distant road defects that are often missed during standard full-image inference.
 
-### YOLO + SAHI Results
+### Detection Count Improvement
 
 | Model | Baseline Detections | SAHI Detections | Improvement |
-|--------|-------------------:|----------------:|-------------:|
-| YOLOv8n | 3773 | 4564 | 20.96% |
-| **YOLOv8s** | 4237 | 5475 | **29.22%** |
-| YOLOv8m | 4551 | 5321 | 16.92% |
-| YOLO11n | 3612 | 4496 | 24.47% |
-| YOLO11s | 4016 | 4826 | 20.17% |
-| YOLO11m | 3986 | 4722 | 18.46% |
+|-------|--------------------:|----------------:|------------:|
+| YOLOv8n | 3,773 | 4,564 | +20.96% |
+| **YOLOv8s** | **4,237** | **5,475** | **+29.22%** |
+| YOLOv8m | 4,551 | 5,321 | +16.92% |
+| YOLO11n | 3,612 | 4,496 | +24.47% |
+| YOLO11s | 4,016 | 4,826 | +20.17% |
+| YOLO11m | 3,986 | 4,722 | +18.46% |
 
-### Key Observations
+### SAHI COCO Evaluation
 
-- SAHI consistently improved detection counts across all YOLO models.
-- YOLOv8s achieved the largest improvement (+29.22%).
-- YOLO11n demonstrated the highest improvement among YOLO11 variants (+24.47%).
-- Sliced inference significantly improved the localization of small and distant road defects.
+| Model | Precision | Recall | mAP@50 | mAP@50-95 |
+|-------|-----------|--------|--------|-----------|
+| YOLOv8n | 0.380 | 0.285 | 0.380 | 0.186 |
+| YOLOv8s | 0.441 | 0.311 | 0.441 | 0.218 |
+| **YOLOv8m** | **0.484** | **0.347** | **0.484** | **0.247** |
+| YOLO11n | 0.380 | 0.277 | 0.380 | 0.184 |
+| YOLO11s | 0.421 | 0.301 | 0.421 | 0.207 |
+| YOLO11m | 0.412 | 0.301 | 0.412 | 0.203 |
 
----
-## Qualitative SAHI Example
+### Observations
+
+- SAHI increased detection counts across all six YOLO models. Most additional detections were small road damages missed during standard inference.
+- YOLOv8s achieved the largest relative improvement (+29.22%), while YOLO11n led among YOLO11 variants (+24.47%).
+- The COCO evaluation shows a trade-off: SAHI improves recall of small objects but introduces additional false positives, reducing precision and mAP relative to baselines.
+- YOLOv8m remained the strongest model under SAHI as well.
 
 <p align="center">
   <img src="reports/results/detection/sahi/yolov8m/top_gain_comparisons/top_gain_3.png" width="900">
 </p>
 
 <p align="center">
-  <em>Comparison between standard YOLOv8m inference and SAHI-enhanced inference. Sliced inference enables the detection of additional small and distant road defects while improving localization performance.</em>
+  <em>Figure 2. Standard YOLOv8m inference (left) vs. SAHI-enhanced inference (right). Sliced inference recovers small and distant defects missed by full-image detection.</em>
 </p>
 
 ---
 
-## Exploratory Study: Faster R-CNN + SAHI
+## YOLO11m SAHI Ablation Study
 
-An exploratory analysis was conducted to investigate the effectiveness of SAHI on a two-stage detector.
+An ablation study was conducted using YOLO11m to evaluate the effect of two SAHI hyperparameters: confidence threshold and slice size.
 
-### Experimental Results
+| Slice Size | Confidence | Precision | Recall | mAP@50 | mAP@50-95 |
+|------------|------------|-----------|--------|--------|-----------|
+| 512 x 512 | 0.25 | 0.412 | 0.301 | 0.412 | 0.203 |
+| 512 x 512 | 0.50 | 0.307 | 0.218 | 0.307 | 0.171 |
+| 640 x 640 | 0.25 | 0.402 | 0.299 | 0.402 | 0.208 |
 
-| Model | Images Evaluated | Baseline Detections | SAHI Detections | Improvement |
-|--------|-----------------|-------------------:|----------------:|-------------:|
-| Faster R-CNN | 2000 | 6899 | 11256 | 63.15% |
-
-### Discussion
-
-Although Faster R-CNN + SAHI produced a substantial increase in detected road damage instances, qualitative analysis revealed a significant rise in:
-
-- False positives
-- Overlapping predictions
-- Duplicate detections
-- Class confusion in complex road textures
-
-This behavior differed considerably from the more stable improvements observed with YOLO-based models.
-
-Consequently, Faster R-CNN + SAHI is treated as an exploratory study rather than a primary contribution of this work.
+- **Confidence threshold**: Raising the threshold from 0.25 to 0.50 suppressed false positives but also discarded many correct detections, significantly reducing recall and mAP.
+- **Slice size**: Increasing slice dimensions from 512 to 640 did not improve performance.
+- The default configuration (512 x 512, confidence 0.25) provided the best balance between detection sensitivity and false positive rate and was used for all remaining SAHI evaluations.
 
 ---
 
-## Segmentation Results
+## Exploratory: Faster R-CNN + SAHI
 
-Crack segmentation experiments were conducted on the Crack500 dataset.
+An exploratory experiment applied SAHI to Faster R-CNN to evaluate sliced inference on a two-stage detector.
+
+| Model | Images Evaluated | Baseline Detections | SAHI Detections | Improvement |
+|-------|-----------------|--------------------:|----------------:|------------:|
+| Faster R-CNN | 2,000 | 6,899 | 11,256 | +63.15% |
+
+| Model | Precision | Recall | mAP@50 | mAP@50-95 |
+|-------|-----------|--------|--------|-----------|
+| Faster R-CNN + SAHI | 0.203 | 0.271 | 0.203 | 0.086 |
+
+While SAHI increased detections by over 63%, qualitative analysis revealed that the majority of additional predictions were false positives, duplicate bounding boxes, and overlapping detections. Precision and mAP remained low. Unlike the relatively controlled improvement seen with YOLO models, Faster R-CNN exhibited substantially more class confusion under sliced inference.
+
+This experiment is presented as an exploratory study and is not part of the final proposed approach.
+
+---
+
+## Segmentation
+
+U-Net and DeepLabV3+ were trained on Crack500 with a ResNet34 encoder for 30 epochs.
 
 ### Model Comparison
 
 | Model | Encoder | Epochs | Batch Size | Dice Score | IoU Score |
-|--------|----------|--------|------------|------------|-----------|
+|-------|---------|--------|------------|------------|-----------|
 | **U-Net** | ResNet34 | 30 | 8 | **0.7533** | **0.6118** |
 | DeepLabV3+ | ResNet34 | 30 | 8 | 0.7389 | 0.5931 |
 
-### Key Observations
+### Observations
 
-- U-Net achieved the highest segmentation performance.
-- DeepLabV3+ produced competitive results but slightly underperformed U-Net.
-- U-Net was selected as the final segmentation architecture for this project.
-
----
-## Qualitative Segmentation Comparison
+- U-Net achieved the best segmentation performance and was selected as the final segmentation model.
+- U-Net preserved thin crack structures more accurately, producing cleaner segmentation masks in qualitative comparisons.
+- Both models identified major crack regions reliably, but small and very thin cracks remained challenging.
 
 <p align="center">
-  <img src="reports/results/final_figures/figure_14_segmentation_comparison.png" width="1000">
+  <img src="reports/results/final_figures/figure_14_segmentation_comparison.png" width="900">
 </p>
 
 <p align="center">
-  <em>Qualitative comparison between U-Net and DeepLabV3+ on the Crack500 dataset. U-Net achieved superior Dice and IoU scores and produced more accurate crack boundaries.</em>
+  <em>Figure 3. Qualitative comparison of U-Net and DeepLabV3+ predictions on Crack500 test images. U-Net produced more accurate crack boundaries.</em>
 </p>
 
 ---
 
-## Dataset Information
+## Comparison with Recent Literature
 
-### RDD2022
+### Detection
 
-The Road Damage Detection 2022 (RDD2022) dataset contains road images collected from multiple countries, including:
+| Method | Year | Dataset | mAP@50 | mAP@50-95 |
+|--------|------|---------|--------|-----------|
+| RDD-YOLO | 2024 | RDD2022 | 62.5 | 36.4 |
+| Improved YOLOv8 | 2024 | RDD2022 | 65.7 | -- |
+| YOLOv8-PD | 2024 | RDD2022 | 70.6 | 39.5 |
+| YOLO-RD | 2025 | Japan subset | 55.62 | 25.75 |
+| OBC-YOLOv8 | 2025 | China subset | 86.0 | -- |
+| SEA-YOLOv8 | 2025 | RDD2022 | 63.2 | -- |
+| **YOLOv8m (This Work)** | **2026** | **RDD2022** | **63.3** | **34.4** |
 
-- India
-- Japan
-- Norway
-- United States
-- Czech Republic
+YOLOv8m achieved performance comparable to several recent RDD2022-based methods without architectural modifications. Direct comparison is limited because different studies use different subsets of RDD2022 and different training configurations. YOLO-RD was evaluated on the Japan subset; OBC-YOLOv8 was evaluated on the China subset.
 
-### Detection Classes
+### Segmentation
 
-| ID | Class |
-|----|--------|
-| 0 | Longitudinal Crack |
-| 1 | Transverse Crack |
-| 2 | Alligator Crack |
-| 3 | Other Corruption |
-| 4 | Pothole |
+| Method | Year | Dataset | Dice (%) | IoU (%) |
+|--------|------|---------|----------|---------|
+| Pyramid Attention Network | 2020 | Crack500 | 76.81 | 62.35 |
+| Dual Flow Fusion Model | 2023 | Crack500 | 78.10 | 66.00 |
+| Distribution-aware Noisy-label Learning | 2024 | Crack500 | 74.74 | 60.56 |
+| EGA-UNet | 2025 | Crack500 | 77.80 | 70.00 |
+| **U-Net (This Work)** | **2026** | **Crack500** | **75.33** | **61.18** |
+| DeepLabV3+ (This Work) | 2026 | Crack500 | 73.89 | 59.31 |
 
-### Crack500
-
-Crack500 is a road crack segmentation dataset designed for pixel-level crack extraction tasks.
-
----
-
-## Methodology
-
-### Detection Pipeline
-
-```text
-Road Image
-      │
-      ▼
-YOLO / Faster R-CNN
-      │
-      ▼
-Bounding Box Detection
-      │
-      ▼
-Road Damage Classification
-```
-
-### SAHI Detection Pipeline
-
-```text
-Road Image
-      │
-      ▼
-Image Slicing
-      │
-      ▼
-Detection Model Inference
-      │
-      ▼
-Prediction Merging
-      │
-      ▼
-Enhanced Small-Object Detection
-```
-
-### Segmentation Pipeline
-
-```text
-Road Image
-      │
-      ▼
-U-Net / DeepLabV3+
-      │
-      ▼
-Pixel-Level Crack Mask
-```
-
----
-
-## Repository Structure
-
-```text
-Thesis/
-│
-├── .gitignore
-├── README.md
-├── requirements.txt
-│
-├── datasets/
-│
-├── detection/
-│   └── checkpoints/
-│
-├── notebooks/
-│   ├── 01_dataset_exploration.ipynb
-│   ├── 02_yolov8n_baseline.ipynb
-│   ├── 03_yolov8s_baseline.ipynb
-│   ├── 04_sahi_yolov8n.ipynb
-│   ├── 05_sahi_yolov8s.ipynb
-│   ├── 06_yolov8m_baseline.ipynb
-│   ├── 07_sahi_yolov8m.ipynb
-│   ├── 08_unet_crack500.ipynb
-│   ├── 09_deeplabv3plus_crack500.ipynb
-│   ├── 10_segmentation_comparison.ipynb
-│   ├── 11_yolov11n_baseline.ipynb
-│   ├── 12_yolov11s_baseline.ipynb
-│   ├── 13_yolov11m_baseline.ipynb
-│   ├── 14_faster_rcnn.ipynb
-│   ├── 15_yolov11n_sahi.ipynb
-│   ├── 16_yolov11s_sahi.ipynb
-│   ├── 17_yolov11m_sahi.ipynb
-│   └── 18_faster_rcnn_sahi.ipynb
-│
-├── presentations/
-│
-└── reports/
-    ├── final_report/
-    ├── methodology/
-    ├── literature_review/
-    └── results/
-        ├── detection/
-        ├── segmentation/
-        ├── eda/
-        └── final_figures/
-```
+Both models achieved competitive segmentation performance using standard architectures (ResNet34 encoder) without task-specific modifications. The Dual Flow Fusion paper reports F1-score, which is equivalent to Dice for binary segmentation. EGA-UNet reports foreground IoU.
 
 ---
 
@@ -296,24 +246,23 @@ Thesis/
 
 ### Detection
 
-- YOLOv8m achieved the highest overall detection performance.
-- SAHI consistently improved small-object detection across all YOLO models.
-- YOLOv8s + SAHI achieved the largest improvement (+29.22%).
-- Faster R-CNN provided a competitive two-stage baseline.
-- Faster R-CNN + SAHI produced higher sensitivity but substantially increased false positives.
+- YOLOv8m achieved the highest overall detection performance across Precision, Recall, mAP@50, and mAP@50-95.
+- Within both the YOLOv8 and YOLO11 families, larger model variants consistently outperformed smaller ones.
+- SAHI increased detection counts for every YOLO model, but also increased false positives, reducing Precision and mAP in the COCO evaluation.
+- The YOLO11m SAHI ablation study confirmed that the default settings (512 x 512 slices, confidence 0.25) provided the best balance between sensitivity and false positive rate.
+- Faster R-CNN + SAHI increased detections by over 63% but produced many duplicate and overlapping predictions and was not included in the final approach.
 
 ### Segmentation
 
-- U-Net outperformed DeepLabV3+ on Crack500.
-- Crack segmentation performance exceeded 0.75 Dice Score.
-- ResNet34 proved to be an effective encoder backbone for both architectures.
+- U-Net achieved the best segmentation performance (Dice 0.7533, IoU 0.6118) and was selected as the final segmentation model.
+- Both models identified major crack regions, but small and very thin cracks remained difficult to segment accurately.
 
 ### Failure Cases
 
-Common sources of false positives include:
+Common sources of false positive detections across models:
 
 - Vegetation and roadside plants
-- Shadows
+- Shadows and lighting variation
 - Snow-covered road regions
 - High-contrast road textures
 - Lane markings and worn paint
@@ -325,52 +274,26 @@ These cases highlight the challenges of robust road damage detection under varyi
 
 ## Experimental Artifacts
 
-The repository includes:
+The `reports/results/` directory contains the full set of experimental outputs:
 
-- Training curves
-- Confusion matrices
-- Precision-Recall curves
-- F1 score curves
-- SAHI comparison figures
-- Segmentation predictions
-- Failure case analysis
-- Thesis-ready visualizations
-- Final quantitative comparison tables
-
-All selected figures are stored under:
-
-```text
-reports/results/final_figures/
-```
-
----
-
-## Project Status
-
-- ✅ Exploratory Data Analysis
-- ✅ YOLOv8 Training and Evaluation
-- ✅ YOLO11 Training and Evaluation
-- ✅ Faster R-CNN Training and Evaluation
-- ✅ SAHI Evaluation
-- ✅ Exploratory Faster R-CNN + SAHI Analysis
-- ✅ U-Net Segmentation
-- ✅ DeepLabV3+ Segmentation
-- ✅ Experimental Comparison
-- 🚧 Thesis Writing and Documentation
+- Training loss and metric curves for all detection and segmentation models
+- Confusion matrices (raw and normalized) for each YOLO and YOLO11 variant
+- Precision-Recall and F1-score curves
+- SAHI side-by-side comparison images and top-gain examples
+- Segmentation prediction examples for both U-Net and DeepLabV3+
+- Literature comparison tables (CSV)
+- Thesis-ready figures in `reports/results/final_figures/`
 
 ---
 
 ## Future Work
 
-Potential extensions include:
-
-- Transformer-based object detectors
+- Transformer-based detection architectures (e.g., RT-DETR, DINO)
 - Vision Transformer segmentation models
-- Real-time deployment on edge devices
-- Additional road crack segmentation datasets
-- Domain adaptation across countries
-- Multi-modal road inspection systems
-- Integration with intelligent road maintenance frameworks
+- Real-time deployment and benchmarking on edge devices
+- Domain adaptation across countries and road surface types
+- Integration of detection and segmentation into a unified inspection pipeline
+- Evaluation on additional crack segmentation datasets
 
 ---
 
@@ -379,5 +302,3 @@ Potential extensions include:
 **Aadeesh Ranjan**
 
 B.Tech Computer Science and Engineering
-
-Road Damage Detection and Crack Segmentation Thesis Project
