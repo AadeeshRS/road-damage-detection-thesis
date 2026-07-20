@@ -4,6 +4,8 @@ detection/checkpoints/
 # YOLO outputs
 runs/
 
+yolo/
+
 # Model weights
 *.pt
 *.pth
