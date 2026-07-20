@@ -19,6 +19,12 @@ from .block import DFL, SAVPE, BNContrastiveHead, ContrastiveHead, Proto, Proto2
 from .conv import Conv, DWConv
 from .transformer import MLP, DeformableTransformerDecoder, DeformableTransformerDecoderLayer
 from .utils import bias_init_with_prob, linear_init
+from .lscd import (
+    SharedConvBlock,
+    ConvGN,
+    LSCDRegressionHead,
+    LSCDClassificationHead,
+)
 
 __all__ = (
     "OBB",
@@ -102,20 +108,44 @@ class Detect(nn.Module):
         self.no = nc + self.reg_max * 4  # number of outputs per anchor
         self.stride = torch.zeros(self.nl)  # strides computed during build
         c2, c3 = max((16, ch[0] // 4, self.reg_max * 4)), max(ch[0], min(self.nc, 100))  # channels
-        self.cv2 = nn.ModuleList(
-            nn.Sequential(Conv(x, c2, 3), Conv(c2, c2, 3), nn.Conv2d(c2, 4 * self.reg_max, 1)) for x in ch
-        )
-        self.cv3 = (
-            nn.ModuleList(nn.Sequential(Conv(x, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, self.nc, 1)) for x in ch)
-            if self.legacy
-            else nn.ModuleList(
-                nn.Sequential(
-                    nn.Sequential(DWConv(x, x, 3), Conv(x, c3, 1)),
-                    nn.Sequential(DWConv(c3, c3, 3), Conv(c3, c3, 1)),
-                    nn.Conv2d(c3, self.nc, 1),
-                )
-                for x in ch
+        self.stems = nn.ModuleList(
+            ConvGN(
+                c,
+                c2,
+                k=1,
             )
+            for c in ch
+        )
+
+        self.shared = SharedConvBlock(c2)
+        # self.cv2 = nn.ModuleList(
+        #     nn.Sequential(Conv(x, c2, 3), Conv(c2, c2, 3), nn.Conv2d(c2, 4 * self.reg_max, 1)) for x in ch
+        # )
+        self.cv2 = nn.ModuleList(
+            LSCDRegressionHead(
+                c2,
+                self.reg_max,
+            )
+            for _ in ch
+        )
+        # self.cv3 = (
+        #     nn.ModuleList(nn.Sequential(Conv(x, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, self.nc, 1)) for x in ch)
+        #     if self.legacy
+        #     else nn.ModuleList(
+        #         nn.Sequential(
+        #             nn.Sequential(DWConv(x, x, 3), Conv(x, c3, 1)),
+        #             nn.Sequential(DWConv(c3, c3, 3), Conv(c3, c3, 1)),
+        #             nn.Conv2d(c3, self.nc, 1),
+        #         )
+        #         for x in ch
+        #     )
+        # )
+        self.cv3 = nn.ModuleList(
+            LSCDClassificationHead(
+                c2,
+                self.nc,
+            )
+            for _ in ch
         )
         self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
 
@@ -150,8 +180,34 @@ class Detect(nn.Module):
         if box_head is None or cls_head is None:  # for fused inference
             return dict()
         bs = x[0].shape[0]  # batch size
-        boxes = torch.cat([box_head[i](x[i]).view(bs, 4 * self.reg_max, -1) for i in range(self.nl)], dim=-1)
-        scores = torch.cat([cls_head[i](x[i]).view(bs, self.nc, -1) for i in range(self.nl)], dim=-1)
+        box_preds = []
+        cls_preds = []
+
+        for i in range(self.nl):
+
+            stem_feat = self.stems[i](x[i])
+
+            shared_feat = self.shared(stem_feat)
+
+            box_preds.append(
+                box_head[i](shared_feat).view(
+                    bs,
+                    4 * self.reg_max,
+                    -1,
+                )
+            )
+
+            cls_preds.append(
+                cls_head[i](shared_feat).view(
+                    bs,
+                    self.nc,
+                    -1,
+                )
+            )
+
+        boxes = torch.cat(box_preds, dim=-1)
+
+        scores = torch.cat(cls_preds, dim=-1)
         return dict(boxes=boxes, scores=scores, feats=x)
 
     def forward(
@@ -196,10 +252,10 @@ class Detect(nn.Module):
     def bias_init(self):
         """Initialize Detect() biases, WARNING: requires stride availability."""
         for i, (a, b) in enumerate(zip(self.one2many["box_head"], self.one2many["cls_head"])):  # from
-            a[-1].bias.data[:] = 2.0  # box
-            b[-1].bias.data[: self.nc] = math.log(
+            a.pred.bias.data[:] = 2.0
+            b.pred.bias.data[: self.nc] = math.log(
                 5 / self.nc / (640 / self.stride[i]) ** 2
-            )  # cls (.01 objects, 80 classes, 640 img)
+            )
         if self.end2end:
             for i, (a, b) in enumerate(zip(self.one2one["box_head"], self.one2one["cls_head"])):  # from
                 a[-1].bias.data[:] = 2.0  # box

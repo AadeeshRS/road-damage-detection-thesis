@@ -11,7 +11,7 @@ class Scale(nn.Module):
         super().__init__()
         self.scale = nn.Parameter(torch.tensor(float(init_value)))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * self.scale
 
 
@@ -56,3 +56,74 @@ class ConvGN(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.act(self.gn(self.conv(x)))
+
+
+class SharedConvBlock(nn.Module):
+    """
+    Shared feature extraction block used by LSCD.
+
+    The same instance of this block is applied to every detection scale
+    (P3, P4, P5), allowing all scales to share convolution weights.
+    """
+
+    def __init__(self, channels: int):
+        super().__init__()
+
+        self.block = nn.Sequential(
+            ConvGN(
+                channels,
+                channels,
+                k=3,
+                s=1,
+            ),
+            ConvGN(
+                channels,
+                channels,
+                k=3,
+                s=1,
+            ),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.block(x)
+
+
+class LSCDRegressionHead(nn.Module):
+    """
+    LSCD regression branch.
+    """
+
+    def __init__(self, channels: int, reg_max: int):
+        super().__init__()
+
+        self.scale = Scale()
+
+        self.pred = nn.Conv2d(
+            channels,
+            4 * reg_max,
+            kernel_size=1,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.pred(x)
+        x = self.scale(x)
+        return x
+
+
+class LSCDClassificationHead(nn.Module):
+    """
+    LSCD classification branch.
+    """
+
+    def __init__(self, channels: int, nc: int):
+        super().__init__()
+
+        self.pred = nn.Conv2d(
+            channels,
+            nc,
+            kernel_size=1,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.pred(x)
+
