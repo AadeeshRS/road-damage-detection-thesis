@@ -35,8 +35,6 @@ from ultralytics.nn.modules import (
     C2fCIB,
     C2fPSA,
     C2fDAttn,
-    EMA,
-    AAM,
     C3Ghost,
     C3k2,
     C3x,
@@ -1987,10 +1985,6 @@ def parse_model(d, ch, verbose=True):
                 legacy = False
         elif m is AIFI:
             args = [ch[f], *args]
-        elif m in frozenset({EMA, AAM}):  # channel-preserving attention gates
-            c1 = ch[f]  # explicitly read from previous layer output
-            c2 = c1
-            args = [c1]
         elif m in frozenset({HGStem, HGBlock}):
             c1, cm, c2 = ch[f], args[0], args[1]
             args = [c1, cm, c2, *args[2:]]
