@@ -106,6 +106,7 @@ from .transformer import (
     TransformerEncoderLayer,
     TransformerLayer,
 )
+from .dat import C2fDAttn, DAttention
 
 __all__ = (
     "AIFI",
@@ -134,6 +135,8 @@ __all__ = (
     "BottleneckCSP",
     "C2f",
     "C2fAttn",
+    "C2fDAttn",
+    "DAttention",
     "C2fCIB",
     "C2fPSA",
     "C3Ghost",
