@@ -2038,6 +2038,9 @@ def parse_model(d, ch, verbose=True):
             c2 = args[0]
             c1 = ch[f]
             args = [*args[1:]]
+        elif m in frozenset({EMA, AAM}):
+            c2 = ch[f]              # channel-preserving: output == input
+            args = [c2, *args]      # prepend c1 so __init__(c1, ...) is satisfied
         else:
             c2 = ch[f]
 
