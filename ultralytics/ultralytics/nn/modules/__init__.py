@@ -107,6 +107,7 @@ from .transformer import (
     TransformerLayer,
 )
 from .dat import C2fDAttn, DAttention
+from .aefpn import EMA, AAM
 
 __all__ = (
     "AIFI",
@@ -137,6 +138,8 @@ __all__ = (
     "C2fAttn",
     "C2fDAttn",
     "DAttention",
+    "EMA",
+    "AAM",
     "C2fCIB",
     "C2fPSA",
     "C3Ghost",

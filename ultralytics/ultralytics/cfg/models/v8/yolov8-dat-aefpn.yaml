@@ -1,0 +1,66 @@
+# YOLOv8 + C2fDAttn (DAT backbone) + AE-FPN (Adaptive EMA Feature Pyramid Network)
+#
+# Neck replaces standard FPN-PAN with AE-FPN:
+#   - AAM (Adaptive Attention Module) on deepest backbone feature (P5/SPPF)
+#     before the top-down path begins → large-target sensitivity
+#   - EMA (Efficient Multi-scale Attention) gate after every FPN/PAN fusion
+#     block → suppresses fused noise, emphasises spatially important channels
+#
+# Architecture sources:
+#   SEA-YOLO, PLOS ONE 2025 (https://doi.org/10.1371/journal.pone.0324439)
+#   DAT: Improved YOLOv8 for RDD, Discover Applied Sciences 2024
+#
+# Scales:
+#   n  → CPU validation / smoke test   (fast)
+#   m  → Kaggle thesis training        (target quality)
+
+nc: 5  # RDD2022: longitudinal_crack, transverse_crack, alligator_crack, other_corruption, pothole
+
+scales:
+  # [depth_multiple, width_multiple, max_channels]
+  n: [0.33, 0.25, 1024]
+  s: [0.33, 0.50, 1024]
+  m: [0.67, 0.75,  768]
+
+# ── Backbone: YOLOv8 + C2fDAttn at P4/P5 ───────────────────────────────────
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv,     [64, 3, 2]]         # 0  P1/2
+  - [-1, 1, Conv,     [128, 3, 2]]        # 1  P2/4
+  - [-1, 3, C2f,      [128, True]]        # 2
+  - [-1, 1, Conv,     [256, 3, 2]]        # 3  P3/8
+  - [-1, 6, C2f,      [256, True]]        # 4  P3 features
+  - [-1, 1, Conv,     [512, 3, 2]]        # 5  P4/16
+  - [-1, 6, C2fDAttn, [512, True]]        # 6  P4 — DAT deformable attention
+  - [-1, 1, Conv,     [1024, 3, 2]]       # 7  P5/32
+  - [-1, 3, C2fDAttn, [1024, True]]       # 8  P5 — DAT deformable attention
+  - [-1, 1, SPPF,     [1024, 5]]          # 9  pooled P5
+
+# ── Neck: AE-FPN (AAM + EMA gates in FPN-PAN) ──────────────────────────────
+head:
+  # AAM on deepest backbone feature before top-down FPN begins
+  - [-1, 1, AAM, []]                            # 10  adaptive attention on P5 (C3 in paper)
+
+  # ── Top-down FPN ──────────────────────────────────────────────────────────
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]  # 11  P5 → P4 resolution
+  - [[-1, 6], 1, Concat, [1]]                   # 12  cat DAT-P4 (cross-layer fusion M2)
+  - [-1, 3, C2f, [512]]                         # 13  fuse P4 features
+  - [-1, 1, EMA, []]                            # 14  EMA gate → T2
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]  # 15  P4 → P3 resolution
+  - [[-1, 4], 1, Concat, [1]]                   # 16  cat P3 (cross-layer fusion M3)
+  - [-1, 3, C2f, [256]]                         # 17  fuse P3 features
+  - [-1, 1, EMA, []]                            # 18  EMA gate → T1  (P3 small-object)
+
+  # ── Bottom-up PAN ─────────────────────────────────────────────────────────
+  - [-1, 1, Conv, [256, 3, 2]]                  # 19  P3 → P4 downsample
+  - [[-1, 14], 1, Concat, [1]]                  # 20  cat EMA-P4 (T2)
+  - [-1, 3, C2f, [512]]                         # 21  fuse P4
+  - [-1, 1, EMA, []]                            # 22  EMA gate  (P4 medium-object)
+
+  - [-1, 1, Conv, [512, 3, 2]]                  # 23  P4 → P5 downsample
+  - [[-1, 10], 1, Concat, [1]]                  # 24  cat AAM-enhanced P5
+  - [-1, 3, C2f, [1024]]                        # 25  fuse P5  (P5 large-object)
+
+  # ── Detection head (standard Detect; LSCD head replaces this in Phase 5) ──
+  - [[18, 22, 25], 1, Detect, [nc]]             # 26  Detect(P3, P4, P5)
