@@ -1,0 +1,69 @@
+# Full Novel Hybrid Model for Road Damage Detection (Thesis Master Architecture)
+#
+# Combines four novel architectural enhancements:
+#   1. Backbone: DAT (C2fDAttn deformable attention at P4 & P5 stages)
+#   2. Neck:     AE-FPN (AAM coordinate attention at P5 + EMA gates at all FPN/PAN junctions)
+#   3. Head:     LSCD-Head (Lightweight Shared Conv Detection head with per-scale Scale parameters)
+#   4. Loss:     MPDIoU (Minimum Points Distance IoU loss function)
+#
+# Sources:
+#   - DAT:     Discover Applied Sciences 2024 (doi:10.1007/s42452-024-06129-0)
+#   - AE-FPN:  PLOS ONE 2025 (doi:10.1371/journal.pone.0324439)
+#   - LSCD:    MLPRAE 2024 / PLOS ONE 2025
+#   - MPDIoU:  arXiv:2307.07662
+#
+# Scales:
+#   n → fast local CPU smoke test / sanity check
+#   s → small scale option
+#   m → target model scale for Kaggle GPU thesis evaluation
+
+nc: 5  # RDD2022: longitudinal_crack, transverse_crack, alligator_crack, other_corruption, pothole
+
+scales:
+  # [depth_multiple, width_multiple, max_channels]
+  n: [0.33, 0.25, 1024]
+  s: [0.33, 0.50, 1024]
+  m: [0.67, 0.75,  768]
+
+# ── Backbone: DAT-augmented YOLOv8 Backbone ────────────────────────────────
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv,     [64, 3, 2]]         # 0  P1/2
+  - [-1, 1, Conv,     [128, 3, 2]]        # 1  P2/4
+  - [-1, 3, C2f,      [128, True]]        # 2
+  - [-1, 1, Conv,     [256, 3, 2]]        # 3  P3/8
+  - [-1, 6, C2f,      [256, True]]        # 4  P3 features
+  - [-1, 1, Conv,     [512, 3, 2]]        # 5  P4/16
+  - [-1, 6, C2fDAttn, [512, True]]        # 6  P4 — DAT Deformable Attention
+  - [-1, 1, Conv,     [1024, 3, 2]]       # 7  P5/32
+  - [-1, 3, C2fDAttn, [1024, True]]       # 8  P5 — DAT Deformable Attention
+  - [-1, 1, SPPF,     [1024, 5]]          # 9  Pooled P5
+
+# ── Neck: AE-FPN (AAM + EMA gates in FPN-PAN) ──────────────────────────────
+head:
+  # AAM on deepest backbone feature before top-down FPN begins
+  - [-1, 1, AAM, []]                            # 10  AAM coordinate attention on P5
+
+  # ── Top-down FPN ──────────────────────────────────────────────────────────
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]  # 11  P5 → P4 resolution
+  - [[-1, 6], 1, Concat, [1]]                   # 12  cat DAT-P4
+  - [-1, 3, C2f, [512]]                         # 13  fuse P4 features
+  - [-1, 1, EMA, []]                            # 14  EMA gate → T2
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]  # 15  P4 → P3 resolution
+  - [[-1, 4], 1, Concat, [1]]                   # 16  cat P3
+  - [-1, 3, C2f, [256]]                         # 17  fuse P3 features
+  - [-1, 1, EMA, []]                            # 18  EMA gate → T1 (P3 small objects)
+
+  # ── Bottom-up PAN ─────────────────────────────────────────────────────────
+  - [-1, 1, Conv, [256, 3, 2]]                  # 19  P3 → P4 downsample
+  - [[-1, 14], 1, Concat, [1]]                  # 20  cat EMA-P4 (T2)
+  - [-1, 3, C2f, [512]]                         # 21  fuse P4
+  - [-1, 1, EMA, []]                            # 22  EMA gate (P4 medium objects)
+
+  - [-1, 1, Conv, [512, 3, 2]]                  # 23  P4 → P5 downsample
+  - [[-1, 10], 1, Concat, [1]]                  # 24  cat AAM-enhanced P5
+  - [-1, 3, C2f, [1024]]                        # 25  fuse P5 (P5 large objects)
+
+  # ── Detection Head: LSCD Head ─────────────────────────────────────────────
+  - [[18, 22, 25], 1, Detect, [nc]]         # 26  LSCD shared conv detection head (Detect class uses LSCD head)
