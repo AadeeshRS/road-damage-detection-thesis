@@ -117,36 +117,19 @@ class Detect(nn.Module):
             for c in ch
         )
 
-        self.shared = SharedConvBlock(c2)
-        # self.cv2 = nn.ModuleList(
-        #     nn.Sequential(Conv(x, c2, 3), Conv(c2, c2, 3), nn.Conv2d(c2, 4 * self.reg_max, 1)) for x in ch
-        # )
-        self.cv2 = nn.ModuleList(
-            LSCDRegressionHead(
-                c2,
-                self.reg_max,
-            )
-            for _ in ch
-        )
-        # self.cv3 = (
-        #     nn.ModuleList(nn.Sequential(Conv(x, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, self.nc, 1)) for x in ch)
-        #     if self.legacy
-        #     else nn.ModuleList(
-        #         nn.Sequential(
-        #             nn.Sequential(DWConv(x, x, 3), Conv(x, c3, 1)),
-        #             nn.Sequential(DWConv(c3, c3, 3), Conv(c3, c3, 1)),
-        #             nn.Conv2d(c3, self.nc, 1),
-        #         )
-        #         for x in ch
-        #     )
-        # )
-        self.cv3 = nn.ModuleList(
-            LSCDClassificationHead(
-                c2,
-                self.nc,
-            )
-            for _ in ch
-        )
+        self.shared = SharedConvBlock(c2)   # ONE shared block across all FPN scales
+
+        # LSCD regression: ONE shared Conv2d + per-scale learnable Scale
+        # Paper: 'each detection head uses a shared convolution Conv2d x scale'
+        self.cv2 = LSCDRegressionHead(c2, self.reg_max, self.nl)
+
+        print("LEGACY =", self.legacy)
+
+        # LSCD classification: ONE shared Conv2d + per-scale bias offset
+        # Paper: 'a shared Conv2d convolution is employed for classification'
+        # Per-scale bias offsets calibrate the background prior per FPN level.
+        self.cv3 = LSCDClassificationHead(c2, self.nc, self.nl)
+
         self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
 
         if end2end:
@@ -176,7 +159,14 @@ class Detect(nn.Module):
     def forward_head(
         self, x: list[torch.Tensor], box_head: torch.nn.Module = None, cls_head: torch.nn.Module = None
     ) -> dict[str, torch.Tensor]:
-        """Concatenates and returns predicted bounding boxes and class probabilities."""
+        """Concatenates and returns predicted bounding boxes and class probabilities.
+
+        LSCD architecture:
+          - box_head is a single LSCDRegressionHead (shared Conv2d + per-scale Scale).
+            Called as box_head(shared_feat, scale_idx=i) for each FPN level.
+          - cls_head is a single LSCDClassificationHead (shared Conv2d).
+            Called as cls_head(shared_feat) for each FPN level.
+        """
         if box_head is None or cls_head is None:  # for fused inference
             return dict()
         bs = x[0].shape[0]  # batch size
@@ -184,29 +174,20 @@ class Detect(nn.Module):
         cls_preds = []
 
         for i in range(self.nl):
+            stem_feat = self.stems[i](x[i])            # scale-specific 1x1 stem
+            shared_feat = self.shared(stem_feat)        # shared 3x3 block (same weights every scale)
 
-            stem_feat = self.stems[i](x[i])
-
-            shared_feat = self.shared(stem_feat)
-
+            # Regression: shared conv x scale[i]  (paper-accurate)
             box_preds.append(
-                box_head[i](shared_feat).view(
-                    bs,
-                    4 * self.reg_max,
-                    -1,
-                )
+                box_head(shared_feat, scale_idx=i).view(bs, 4 * self.reg_max, -1)
             )
 
+            # Classification: shared conv + per-scale bias offset
             cls_preds.append(
-                cls_head[i](shared_feat).view(
-                    bs,
-                    self.nc,
-                    -1,
-                )
+                cls_head(shared_feat, scale_idx=i).view(bs, self.nc, -1)
             )
 
         boxes = torch.cat(box_preds, dim=-1)
-
         scores = torch.cat(cls_preds, dim=-1)
         return dict(boxes=boxes, scores=scores, feats=x)
 
@@ -241,6 +222,7 @@ class Detect(nn.Module):
 
     def _get_decode_boxes(self, x: dict[str, torch.Tensor]) -> torch.Tensor:
         """Get decoded boxes based on anchors and strides."""
+
         shape = x["feats"][0].shape  # BCHW
         if self.dynamic or self.shape != shape:
             self.anchors, self.strides = (a.transpose(0, 1) for a in make_anchors(x["feats"], self.stride, 0.5))
@@ -250,18 +232,23 @@ class Detect(nn.Module):
         return dbox
 
     def bias_init(self):
-        """Initialize Detect() biases, WARNING: requires stride availability."""
-        for i, (a, b) in enumerate(zip(self.one2many["box_head"], self.one2many["cls_head"])):  # from
-            a.pred.bias.data[:] = 2.0
-            b.pred.bias.data[: self.nc] = math.log(
-                5 / self.nc / (640 / self.stride[i]) ** 2
-            )
+        """Initialize Detect() biases for LSCD heads, WARNING: requires stride availability."""
+        # Regression: shared conv bias -> uniform DFL distribution at init
+        self.one2many["box_head"].shared_conv.bias.data[:] = 2.0
+
+        # Classification: shared conv bias -> zero (offsets handle per-scale priors)
+        # Per-scale bias offsets -> YOLO-standard: log(5/nc/(640/stride)^2)
+        cls_head = self.one2many["cls_head"]
+        cls_head.shared_conv.bias.data[:] = 0.0
+        for i in range(self.nl):
+            cls_head.scale_bias[i].data[:] = math.log(5 / self.nc / (640 / self.stride[i]) ** 2)
+
         if self.end2end:
-            for i, (a, b) in enumerate(zip(self.one2one["box_head"], self.one2one["cls_head"])):  # from
-                a[-1].bias.data[:] = 2.0  # box
-                b[-1].bias.data[: self.nc] = math.log(
-                    5 / self.nc / (640 / self.stride[i]) ** 2
-                )  # cls (.01 objects, 80 classes, 640 img)
+            self.one2one["box_head"].shared_conv.bias.data[:] = 2.0
+            cls_head_o2o = self.one2one["cls_head"]
+            cls_head_o2o.shared_conv.bias.data[:] = 0.0
+            for i in range(self.nl):
+                cls_head_o2o.scale_bias[i].data[:] = math.log(5 / self.nc / (640 / self.stride[i]) ** 2)
 
     def decode_bboxes(self, bboxes: torch.Tensor, anchors: torch.Tensor, xywh: bool = True) -> torch.Tensor:
         """Decode bounding boxes from predictions."""

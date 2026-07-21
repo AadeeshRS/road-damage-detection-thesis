@@ -171,14 +171,12 @@ def bbox_iou(
 
             norm = img_w.pow(2) + img_h.pow(2) + eps
             assert imgsz is not None
+           
             return iou - d1 / norm - d2 / norm
 
         elif CIoU:
             c2 = cw.pow(2) + ch.pow(2) + eps
-            rho2 = (
-                (b2_x1 + b2_x2 - b1_x1 - b1_x2).pow(2)
-                + (b2_y1 + b2_y2 - b1_y1 - b1_y2).pow(2)
-            ) / 4
+            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2).pow(2) + (b2_y1 + b2_y2 - b1_y1 - b1_y2).pow(2)) / 4
 
             v = (4 / math.pi**2) * ((w2 / h2).atan() - (w1 / h1).atan()).pow(2)
 
@@ -190,10 +188,7 @@ def bbox_iou(
         elif DIoU:
             c2 = cw.pow(2) + ch.pow(2) + eps
 
-            rho2 = (
-                (b2_x1 + b2_x2 - b1_x1 - b1_x2).pow(2)
-                + (b2_y1 + b2_y2 - b1_y1 - b1_y2).pow(2)
-            ) / 4
+            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2).pow(2) + (b2_y1 + b2_y2 - b1_y1 - b1_y2).pow(2)) / 4
 
             return iou - rho2 / c2
         else:
